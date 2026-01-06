@@ -1,0 +1,545 @@
+--[[
+
+TeleBlox v1.2 | @eboy_pro123
+
+Modern telegram-bot module, which allows you to connect
+your game to a telegram bot, and use all features of it.
+
+TeleBlox Docs - https://t.me/teleblox
+Telegram Bot Api Docs - https://core.telegram.org/bots/api/
+
+]]--
+
+-- don't touch anything below
+
+local httpservice = game:GetService("HttpService")
+
+local module = {}
+
+local allowPolling = true
+
+module.Types = {}
+
+bot_token = "" -- must be empty
+base = "https://api.telegram.org/bot<token>/METHOD_NAME" -- http request example
+
+function nothing()
+	return ""
+end
+
+
+--[[
+	
+	Most important function. Uses given method with given bot token and returns result.
+	Use this function with any method presented here: https://core.telegram.org/bots/api#available-methods
+	Almost every next function is based on this one.
+	
+]]--
+module.UseMethod = function(bot, method: string)
+
+	if bot ~= true then
+		local url = string.gsub(base, "<token>", bot)
+		url = string.gsub(url, "METHOD_NAME", method)
+		
+		-- print(url)
+		
+		return httpservice:GetAsync(url)
+	else
+		local url = string.gsub(base, "<token>", bot_token)
+		url = string.gsub(url, "METHOD_NAME", method)
+		
+		-- print(url)
+
+		return httpservice:GetAsync(url)
+	end
+end
+
+
+
+-- Test token validity
+module.TestToken = function(token)
+	local success,smth = pcall(function()
+		module.UseMethod(token, "getMe")
+	end) 
+	
+	if success then
+		return true
+	else
+		return false
+	end
+end
+
+-- JSON encode
+module.JSON_Encode = function(list)
+	return httpservice:JSONEncode(list)
+end
+
+-- JSON decode
+module.JSON_Decode = function(list)
+	return httpservice:JSONDecode(list)
+end
+
+-- Inline button instance
+module.Types.InlineButton = function(text: string, url: string, callback_query: string)
+	if url ~= nil or callback_query ~= nil then
+		if url then else url = "" end
+		if callback_query then else callback_query = "" end
+		
+		
+		local isnt = {
+			["text"] = text.."\"",
+			["callback_data"] = callback_query,
+			["url"] = url,
+		}
+		local encoded = module.JSON_Encode(isnt)
+
+		local gsub = string.gsub(encoded,"\\","")
+
+		local newgsub = string.gsub(gsub, "\"{","{")
+
+		-- local newgsub2 = string.gsub(newgsub, "\"}","}")
+		
+		local newgsub2 = newgsub
+
+		local newgsub3 = string.gsub(newgsub2, "}\"","}")
+
+		return newgsub3
+	else
+		error("\n\nError in InlineButton: button must have atleast 1 of url or callback_query\n\n")
+	end
+end
+
+-- Inline Keyboard instance
+module.Types.InlineKeyboard = function(Inline_Buttons: string)
+	local isnt = {
+		["inline_keyboard"] = {
+			Inline_Buttons
+		}
+	}
+	
+	local encoded = module.JSON_Encode(isnt)
+
+	local gsub = string.gsub(encoded,"\\","")
+
+	local newgsub = string.gsub(gsub, "\"{","{")
+
+	local newgsub2 = string.gsub(newgsub, "\"}","}")
+	
+	local newgsub3 = string.gsub(newgsub2, "}\"","}")
+
+	return newgsub3
+end
+
+-- Emoji reaction type instance
+module.Types.ReactionTypeEmoji = function(emoji: string)
+	local isnt = {
+		["emoji"] = emoji,
+		["type"] = "emoji",
+	}
+
+	local encoded = module.JSON_Encode(isnt)
+
+	local gsub = string.gsub(encoded,"\\","")
+
+	local newgsub = string.gsub(gsub, "\"{","{")
+
+	-- local newgsub2 = string.gsub(newgsub, "\"}","}")
+
+	local newgsub3 = string.gsub(newgsub, "}\"","}")
+	
+	newgsub3 = "["..newgsub3.."]"
+	
+	print(newgsub3)
+
+	return newgsub3
+end
+
+-- Custom emoji reaction type instance
+module.Types.ReactionTypeCustomEmoji = function(custom_emoji_id: string)
+	local isnt = {
+		["custom_emoji_id"] = custom_emoji_id,
+		["type"] = "custom_emoji",
+	}
+
+	local encoded = module.JSON_Encode(isnt)
+
+	local gsub = string.gsub(encoded,"\\","")
+
+	local newgsub = string.gsub(gsub, "\"{","{")
+
+	-- local newgsub2 = string.gsub(newgsub, "\"}","}")
+
+	local newgsub3 = string.gsub(newgsub, "}\"","}")
+
+	newgsub3 = "["..newgsub3.."]"
+
+	print(newgsub3)
+
+	return newgsub3
+end
+
+-- Declaring bot. This is the first thing you have to do before using any other methods. Also tests if token is valid.
+module.DeclareBot = function(token: string)
+	if module.TestToken(token) == true then
+		bot_token = token
+		
+		return true
+	else
+		error("\n\nError in DeclareBot: incorrect token given, or http-requests are disabled!\n\n")
+	end
+end
+
+-- Getting bot info using getMe method.
+module.GetMe = function(bot)
+	return module.UseMethod(bot, "getMe")
+end
+
+-- Sending message using sendMessage method. parse_mode and reply_markup is optional.
+module.SendMessage = function(bot, chat_id:string, text:string, parse_mode, reply_markup)
+	if bot ~= true then
+		local url = string.gsub(base, "<token>", bot)
+		url = string.gsub(url, "METHOD_NAME", "sendMessage")
+		
+		if parse_mode then else parse_mode = "" end
+		if reply_markup then else reply_markup = module.JSON_Encode({}) end
+		
+		return httpservice:GetAsync(url.."?chat_id="..chat_id.."&text="..text.."&parse_mode="..parse_mode.."&reply_markup="..reply_markup)
+	else
+		local url = string.gsub(base, "<token>", bot_token)
+		url = string.gsub(url, "METHOD_NAME", "sendMessage")
+		
+		if parse_mode then else parse_mode = "" end
+		if reply_markup then else reply_markup = "" end
+
+		return httpservice:GetAsync(url.."?chat_id="..chat_id.."&text="..text.."&parse_mode="..parse_mode.."&reply_markup="..reply_markup)
+	end
+end
+
+-- Forwarding message using forwardMessage method.
+module.ForwardMessage = function(bot, chat_id:string, from_chat_id:string, message_id:string)
+	if bot ~= true then
+		local url = string.gsub(base, "<token>", bot)
+		url = string.gsub(url, "METHOD_NAME", "forwardMessage")
+
+		return httpservice:GetAsync(url.."?chat_id="..chat_id.."&from_chat_id="..from_chat_id.."&message_id="..message_id)
+	else
+		local url = string.gsub(base, "<token>", bot_token)
+		url = string.gsub(url, "METHOD_NAME", "forwardMessage")
+
+		return httpservice:GetAsync(url.."?chat_id="..chat_id.."&from_chat_id="..from_chat_id.."&message_id="..message_id)
+	end
+end
+
+--[[
+	
+	Copy message
+	
+	Copies a message from a chat to another chat.
+	Unlike forwardMessage, the copied message doesn’t have a link
+	to the original message.
+	
+]]--
+module.CopyMessage = function(bot, chat_id, from_chat_id, message_id)
+	if bot ~= true then
+		local url = string.gsub(base, "<token>", bot)
+		url = string.gsub(url, "METHOD_NAME", "copyMessage")
+
+		return httpservice:GetAsync(url.."?chat_id="..chat_id.."&from_chat_id="..from_chat_id.."&message_id="..message_id)
+	else
+		local url = string.gsub(base, "<token>", bot_token)
+		url = string.gsub(url, "METHOD_NAME", "copyMessage")
+
+		return httpservice:GetAsync(url.."?chat_id="..chat_id.."&from_chat_id="..from_chat_id.."&message_id="..message_id)
+	end
+end
+
+--[[
+	
+	Send photo
+	
+	Sends a photo to the specified chat.
+	Photo must be a file_id or a URL.
+	
+]]--
+module.SendPhoto = function(token, chat_id, photo)
+	return module.UseMethod(token, "sendPhoto?chat_id="..chat_id.."&photo="..photo)
+end
+
+--[[
+	
+	Send audio
+	
+	Sends an audio file to the specified chat.
+	Audio must be a file_id or a URL.
+	
+]]--
+module.SendAudio = function(token, chat_id, audio)
+	return module.UseMethod(token, "sendAudio?chat_id="..chat_id.."&audio="..audio)
+end
+
+--[[
+	
+	Send document
+	
+	Sends a document to the specified chat.
+	Document must be a file_id or a URL.
+	
+]]--
+module.SendDocument = function(token, chat_id, document)
+	return module.UseMethod(token, "sendDocument?chat_id="..chat_id.."&document="..document)
+end
+
+--[[
+	
+	Send video
+	
+	Sends a video to the specified chat.
+	Video must be a file_id or a URL.
+	
+]]--
+module.SendVideo = function(token, chat_id, video)
+	return module.UseMethod(token, "sendVideo?chat_id="..chat_id.."&video="..video)
+end
+
+--[[
+	
+	Send animation
+	
+	Sends an animation (GIF or H.264/MPEG-4 AVC video without sound).
+	Animation must be a file_id or a URL.
+	
+]]--
+module.SendAnimation = function(token, chat_id, animation)
+	return module.UseMethod(token, "sendAnimation?chat_id="..chat_id.."&animation="..animation)
+end
+
+--[[
+	
+	Getting updates
+	
+	Returns incoming updates using long polling.
+	old_id is used to prevent receiving the same updates again.
+	
+]]--
+module.GetUpdates = function(bot, old_id)
+	return httpservice:JSONDecode(module.UseMethod(bot, "getUpdates?offset="..old_id+1))
+end
+
+--[[
+	
+	Get last element from list
+	
+	Returns the last element of a table.
+	Used for handling updates list.
+	
+]]--
+module.GetLastFromList = function(list)
+	local count = 0
+	
+	for item in list do
+		count += 1
+	end
+	
+	return list[count]
+end
+
+--[[
+	
+	Getting updates result
+	
+	Returns only the "result" field from getUpdates response.
+	
+]]--
+module.GetUpdatesResult = function(bot, old_id)
+	local updates = module.GetUpdates(bot, old_id)
+
+	-- print(updates)
+
+	local result = updates["result"]
+
+	return result
+end
+
+--[[
+	
+	Polling bot
+	
+	Starts long polling loop.
+	onUpdates is called every time a new update is received.
+	cooldown controls request delay.
+	
+	can be stopped by setting module.AllowPolling to false or by calling module.StopPolling(bot)
+	
+]]--
+module.PollingBot = function(bot, onUpdates, cooldown, decode)
+	if onUpdates then else error("Error in PollingBot: onUpdates function may not be nil!") end
+	if cooldown then else cooldown = .5 end
+	
+	local last_id = 0
+	
+	local old_decoded_updates = ""
+	
+	if decode == nil then decode = true end
+	
+	while allowPolling do
+		wait(cooldown)
+		
+		-- print(module.UseMethod(bot, "getUpdates"))
+		
+		-- print(last_id)
+		
+		if decode == true then
+			local updates = module.GetUpdatesResult(bot, last_id)
+			
+			-- print(updates["result"]["update_id"])
+			
+			if updates[1] ~= nil and updates ~= {} then
+				-- print(updates)
+				
+				-- print(updates[1])
+				
+				last_id = tonumber(updates[1]["update_id"])
+				
+				onUpdates(updates[1])
+			end
+		else
+			local updates = module.UseMethod(bot, "getUpdates?offset="..last_id+1)
+			
+			-- print(updates)
+
+			-- print(updates["result"]["update_id"])
+
+			if updates ~= nil and updates ~= old_decoded_updates and string.find("\"result\":[]", updates) == nil then
+				-- print(updates)
+
+				-- print(updates[1])
+
+				last_id = last_id+1
+
+				onUpdates(updates)
+				
+				old_decoded_updates = updates
+			end
+		end
+	end
+end
+
+module.EditMessageText = function(bot, chat_id, message_id, new_text, reply_markup)
+	-- Edit message text
+	-- reply_markup is optional
+	
+	local method = "editMessageText?chat_id="..chat_id.."&message_id="..message_id.."?text="..new_text
+	
+	if reply_markup ~= nil then method += "&reply_markup="..reply_markup end
+	
+	return module.UseMethod(bot, method)
+end
+
+-- added in v2
+
+module.StopPolling = function(bot)
+	-- Stops polling
+	allowPolling = false
+end
+
+module.SetMessageReaction = function(bot, chat_id, message_id, reaction)
+	-- Sets a reaction on a message
+	-- Available reactions: https://core.telegram.org/bots/api#reactiontype
+	local method = "setMessageReaction?chat_id="..chat_id.."&message_id="..message_id.."&reaction="..reaction
+	
+	return module.UseMethod(bot, method)	
+end
+
+module.SetReactionCustom = function(bot, chat_id, message_id, custom_emoji_id)
+	-- Sets a custom emoji reaction on a message
+	-- custom_emoji_id: The custom emoji identifier of the reaction
+	local method = "setMessageReaction?chat_id="..chat_id.."&message_id="..message_id.."&reaction="..custom_emoji_id
+	
+	return module.UseMethod(bot, method)	
+end
+
+module.SendDice = function(bot, chat_id, emoji)
+	-- Send a dice
+	-- emoji: The emoji on the dice (default is 🎲, must be one of “🎲”, “🎯”, “🏀”, “⚽”, “🎳”, or “🎰”. 
+	-- Dice can have values 1-6 for “🎲”, “🎯” and “🎳”, values 1-5 for “🏀” and “⚽”, and values 1-64 for “🎰”)
+	if not emoji then
+		emoji = ""
+	end
+	
+	local method = "sendDice?chat_id="..chat_id.."&emoji="..emoji
+
+	return module.UseMethod(bot, method)	
+end
+
+module.BanChatMember = function(bot, chat_id, user_id)
+	-- Bans a user from a group, channel or a supergroup. In supergroups, the bot must have the appropriate administrator rights.
+	local method = "banChatMember?chat_id="..chat_id.."&user_id="..user_id
+	
+	return module.UseMethod(bot, method)
+end
+
+module.UnbanChatMember = function(bot, chat_id, user_id)
+	-- Unbans a user from a group, channel or a supergroup. In supergroups, the bot must have the appropriate administrator rights.
+	local method = "unbanChatMember?chat_id="..chat_id.."&user_id="..user_id
+	
+	return module.UseMethod(bot, method)
+end
+
+module.PinChatMessage = function(bot, chat_id, message_id, disable_notification)
+	-- Pins a message in a group, a channel, or a supergroup.
+	local method = "pinChatMessage?chat_id="..chat_id.."&message_id="..message_id
+	
+	if disable_notification ~= nil then method += "&disable_notification="..disable_notification end
+	
+	return module.UseMethod(bot, method)
+end
+
+module.UnpinChatMessage = function(bot, chat_id, message_id)
+	-- Unpins a message in a group, a channel, or a supergroup.
+	local method = "unpinChatMessage?chat_id="..chat_id.."&message_id="..message_id
+	
+	return module.UseMethod(bot, method)
+end
+
+module.UnpinAllChatMessages = function(bot, chat_id)
+	-- Unpins all messages in a group, a channel, or a supergroup.
+	local method = "unpinAllChatMessages?chat_id="..chat_id
+	
+	return module.UseMethod(bot, method)
+end
+
+module.LeaveChat = function(bot, chat_id)
+	-- Use this method for a bot to leave a group, supergroup or a channel.
+	local method = "leaveChat?chat_id="..chat_id
+	
+	return module.UseMethod(bot, method)
+end
+
+module.SetMyName = function(bot, name, language_code)
+	-- Use this method to change the bot's name. Returns True on success.
+	local method = "setMyName?name="..name
+	
+	if language_code ~= nil then method += "&language_code="..language_code end
+	
+	return module.UseMethod(bot, method)
+end
+
+module.GetMyName = function(bot, language_code)
+	-- Use this method to get the current bot name for the given user language. Returns BotName on success.
+	local method = "getMyName"
+	
+	if language_code ~= nil then method += "?language_code="..language_code end
+	
+	return module.UseMethod(bot, method)
+end
+
+module.TransferGift = function(bot, business_connection_id, owned_gift_id, new_owner_chat_id, star_count)
+	-- Use this method to transfer a gift to a new owner. Returns True on success.
+	local method = "transferOwnership?business_connection_id="..business_connection_id.."&owned_gift_id="..owned_gift_id.."&new_owner_chat_id="..new_owner_chat_id
+	
+	if star_count ~= nil then method += "?star_count="..star_count end
+	
+	return module.UseMethod(bot, method)
+end
+
+return module -- telegram channel: @teleblox
